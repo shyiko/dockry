@@ -62,6 +62,13 @@ func (m *imageRef) FQName() string {
 	return s.String()
 }
 
+func (m *imageRef) Reference() string {
+	if m.Digest != "" {
+		return m.Digest
+	}
+	return m.Tag
+}
+
 func parseImageRef(val string) (imageRef, error) {
 	var img imageRef
 	split := strings.Split(val, "/")
@@ -92,6 +99,7 @@ func parseImageRef(val string) (imageRef, error) {
 	} else {
 		// node@sha256:cf454b60ee452473f963f60ff18ba75b8e900174aae9bf0e8051e5a83db85b30
 		img.Digest = refSplit[1]
+		refSplit[0] = strings.SplitN(refSplit[0], ":", 2)[0] // drop tag in case of <image>:<tag>@<digest>6
 	}
 	if refSplit[0] == "" {
 		return img, fmt.Errorf(`"%s" is missing image name`, val)
@@ -275,7 +283,7 @@ func (c *Dockry) Inspect(image string) (*Image, error) {
 		return nil, err
 	}
 	method := "GET"
-	manifestURL := fmt.Sprintf("https://%s/v2/%s/manifests/%s", img.Registry, img.Name, img.Tag)
+	manifestURL := fmt.Sprintf("https://%s/v2/%s/manifests/%s", img.Registry, img.Name, img.Reference())
 	res, err := c.request(method, manifestURL, map[string][]string{
 		"Accept": {"application/vnd.docker.distribution.manifest.v2+json"},
 	}, imageAccessTokenCacheKey(img))
@@ -285,6 +293,11 @@ func (c *Dockry) Inspect(image string) (*Image, error) {
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		return nil, fmt.Errorf("%s %s resulted in %d", method, manifestURL, res.StatusCode)
+	}
+	if res.Header.Get("Content-Type") == "application/vnd.docker.distribution.manifest.list.v2+json" {
+		return nil, fmt.Errorf("%s %s is pointing to a manifest list (something that is not supported at the moment)\n"+
+			"(please created a ticket at https://github.com/shyiko/dockry/issues if you need this)",
+			method, manifestURL)
 	}
 	manifest := struct {
 		Config struct {
