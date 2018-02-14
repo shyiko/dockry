@@ -177,6 +177,8 @@ $ dockry rm $(dockry digest --fq gitlab.example.com:4567/group/project:experimen
 ]
 ```
 
+> (for more information see `dockry --help`)
+
 #### <kbd>Tab</kbd> completion
 
 ```sh
