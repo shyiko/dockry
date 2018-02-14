@@ -1,6 +1,6 @@
 # dockry ![Latest Version](https://img.shields.io/badge/latest-0.1.0-blue.svg) [![Build Status](https://travis-ci.org/shyiko/dockry.svg?branch=master)](https://travis-ci.org/shyiko/dockry)
 
-Human/Scripting-friendly Docker Registry command-line client  
+Docker Registry V2 command-line client  
 (compatible with any registry implementing [Docker Registry HTTP API V2](https://docs.docker.com/registry/spec/api/), ([Docker Hub](https://hub.docker.com/), GitLab Container Registry, etc); public or private).
 
 In short, it allows you to:
@@ -175,6 +175,16 @@ $ dockry rm $(dockry digest --fq gitlab.example.com:4567/group/project:experimen
   },
   ...
 ]
+```
+
+#### <kbd>Tab</kbd> completion
+
+```sh
+# bash
+source <(dockry completion bash)
+
+# zsh
+source <(dockry completion zsh)
 ```
 
 ## Development

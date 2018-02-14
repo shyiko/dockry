@@ -9,6 +9,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/go-errors/errors"
 	"github.com/mitchellh/go-homedir"
+	"github.com/shyiko/dockry/cli"
 	"github.com/shyiko/dockry/rfc7235"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -462,6 +463,15 @@ func readAuthorizationForTokenEndpoint(registry string) (string, error) {
 }
 
 func main() {
+	completion := cli.NewCompletion()
+	completed, err := completion.Execute()
+	if err != nil {
+		log.Debug(err)
+		os.Exit(3)
+	}
+	if completed {
+		os.Exit(0)
+	}
 	var user string
 	var limit int
 	var fq bool
@@ -553,8 +563,9 @@ func main() {
 	llCommand.Flags().BoolVar(&fq, "fq", false, "Output tag(s) fully-qualified")
 	rootCmd.AddCommand(llCommand)
 	inspectCommand := &cobra.Command{
-		Use:   "inspect [image:tag or image@digest]",
-		Short: "Display detailed information on one or more images",
+		Use:     "inspect [image:tag or image@digest]",
+		Aliases: []string{"i"},
+		Short:   "Display detailed information on one or more images",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return pflag.ErrHelp
@@ -577,14 +588,15 @@ func main() {
 	}
 	inspectCommand.Flags().String("format", "", "Go template to render (applied separately to each record)\n"+
 		"    Additional functions:\n"+
-		"      def - {{- if def .config.env VAR }} ... {{- end }} - render content between }} and {{ only if .config.env.VAR is set\n"+
-		"      humanizeSize - e.g. {{ .downloadSize | humanizeSize }}\n"+
-		"      humanizeTime - e.g. {{ .timestamp | humanizeTime }}"+
+		"      def - e.g. {{- if def .config.env VAR }} ... {{- end }} - render content between }} and {{ only if .config.env.VAR is set\n"+
+		"      hsize - e.g. {{ .downloadSize | hsize }} - humanize size (e.g. 1 MB)\n"+
+		"      htime - e.g. {{ .timestamp | htime }} - humanize time (e.g. 1 month ago)"+
 		"")
 	rootCmd.AddCommand(inspectCommand)
 	digestCommand := &cobra.Command{
-		Use:   "digest [image:tag...]",
-		Short: "Print digest(s) of one or more images",
+		Use:     "digest [image:tag...]",
+		Aliases: []string{"d"},
+		Short:   "Print digest(s) of one or more images",
 		Long: "Print digest(s) of one or more images" +
 			"\nAn alias for `inspect <image>:<tag>... <flags> --format='{{.digest}}'`",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -630,8 +642,42 @@ func main() {
 		},
 		Example: "  dockry rm node@sha256:5ff43da...",
 	}
-	rmCommand.Hidden = true
 	rootCmd.AddCommand(rmCommand)
+	completionCmd := &cobra.Command{
+		Use:   "completion",
+		Short: "Command-line completion",
+	}
+	completionCmd.AddCommand(
+		&cobra.Command{
+			Use:   "bash",
+			Short: "Generate Bash completion",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				if len(args) != 0 {
+					return pflag.ErrHelp
+				}
+				if err := completion.GenBashCompletion(os.Stdout); err != nil {
+					log.Error(err)
+				}
+				return nil
+			},
+			Example: "  source <(dockry completion bash)",
+		},
+		&cobra.Command{
+			Use:   "zsh",
+			Short: "Generate Z shell completion",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				if len(args) != 0 {
+					return pflag.ErrHelp
+				}
+				if err := completion.GenZshCompletion(os.Stdout); err != nil {
+					log.Error(err)
+				}
+				return nil
+			},
+			Example: "  source <(dockry completion zsh)",
+		},
+	)
+	rootCmd.AddCommand(completionCmd)
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "Explicit username:password for authorization"+
 		" (by default ~/.docker/config.json is used)")
 	walk(rootCmd, func(cmd *cobra.Command) {
