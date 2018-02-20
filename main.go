@@ -101,7 +101,7 @@ func main() {
 			if debug, _ := cmd.Flags().GetBool("debug"); debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			if limit < 0 {
+			if limit <= 0 {
 				limit = math.MaxInt32
 			}
 		},
