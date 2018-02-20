@@ -1,4 +1,4 @@
-package cli
+package main
 
 import (
 	"flag"
@@ -35,6 +35,21 @@ func (c *Completion) Execute() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	platformFlags := map[string]complete.Predictor{
+		"--l64":      complete.PredictNothing,
+		"-x":         complete.PredictNothing,
+		"--platform": complete.PredictAnything,
+		"-p":         complete.PredictAnything,
+		"--strict":   complete.PredictNothing,
+	}
+	assign := func(m complete.Flags, tail ...complete.Flags) complete.Flags {
+		for _, t := range tail {
+			for k, v := range t {
+				m[k] = v
+			}
+		}
+		return m
+	}
 	run := complete.Command{
 		Sub: complete.Commands{
 			"completion": complete.Command{
@@ -44,21 +59,21 @@ func (c *Completion) Execute() (bool, error) {
 				},
 			},
 			"digest": complete.Command{
-				Flags: complete.Flags{
+				Flags: assign(complete.Flags{
 					"--fq": complete.PredictNothing,
-				},
+				}, platformFlags),
 				Args: complete.PredictAnything,
 			},
 			"inspect": complete.Command{
-				Flags: complete.Flags{
+				Flags: assign(complete.Flags{
 					"--format": complete.PredictAnything,
-				},
+				}, platformFlags),
 			},
 			"ll": complete.Command{
-				Flags: complete.Flags{
+				Flags: assign(complete.Flags{
 					"--fq":    complete.PredictNothing,
 					"--limit": complete.PredictAnything,
-				},
+				}, platformFlags),
 			},
 			"ls": complete.Command{
 				Flags: complete.Flags{
@@ -66,6 +81,7 @@ func (c *Completion) Execute() (bool, error) {
 					"--limit": complete.PredictAnything,
 				},
 			},
+			"rm": complete.Command{},
 			"help": complete.Command{
 				Sub: complete.Commands{
 					"completion": complete.Command{
@@ -78,6 +94,7 @@ func (c *Completion) Execute() (bool, error) {
 					"inspect": complete.Command{},
 					"ll":      complete.Command{},
 					"ls":      complete.Command{},
+					"rm":      complete.Command{},
 				},
 			},
 		},
@@ -93,6 +110,8 @@ func (c *Completion) Execute() (bool, error) {
 	}
 	run.Sub["d"] = run.Sub["digest"]
 	run.Sub["i"] = run.Sub["inspect"]
+	run.Sub["help"].Sub["d"] = run.Sub["help"].Sub["digest"]
+	run.Sub["help"].Sub["i"] = run.Sub["help"].Sub["inspect"]
 	completion := complete.New(filepath.Base(bin), run)
 	if os.Getenv("COMP_LINE") != "" {
 		flag.Parse()

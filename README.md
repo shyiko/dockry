@@ -86,6 +86,23 @@ $ dockry ls mysql --fq --limit=2
 mysql:latest
 mysql:8
 
+# pretty print 
+$ dockry ll azul/zulu-openjdk --limit=3 
+
+master (linux/amd64)  151 MB  3 months ago
+latest (linux/amd64)  159 MB  6 days ago
+9u04 (linux/amd64)    267 MB  6 days ago
+
+# same as above
+$ dockry inspect $(dockry ls alpine --fq --limit=3)
+    --format=$'{{.tag}} ({{platform .}})\t{{.downloadSize | hsize}}\t{{.timestamp | hsince}}'
+
+# same as above
+$ for image in $(dockry ls alpine --fq --limit=3); do
+  dockry inspect $image \
+    --format=$'{{.tag}} ({{platform .}})\t{{.downloadSize | hsize}}\t{{.timestamp | hsince}}' 
+  done
+
 # inspect image without `docker pull`ing
 $ dockry inspect node:6.9.1
 [
@@ -109,32 +126,13 @@ $ dockry inspect node:6.9.1
     }
   }
 ]
-
-# customize `inspect` output
-# (see below for an alternative(s)) 
-$ for image in $(dockry ls alpine --fq --limit=3); do
-  dockry inspect $image \
-    --format=$'{{.name}}:{{.tag}}\t{{.downloadSize | hsize}}\t{{.timestamp | htime}}' 
-  done
-
-alpine:latest    2.1 MB    1 month ago
-alpine:edge      2.1 MB    1 month ago
-alpine:3.7       2.1 MB    1 month ago
-
-# same as above
-$ dockry inspect $(dockry ls alpine --fq --limit=3)
-    --format=$'{{.name}}:{{.tag}}\t{{.downloadSize | hsize}}\t{{.timestamp | htime}}'
     
-# same as above (alias)
-$ dockry ll --fq --limit=3 alpine
-
 # output fully-qualified digest of an image
-# (see below for an alternative) 
-$ dockry inspect shyiko/openvpn:2.4.0_easyrsa-3.0.3 --format='{{.name}}@{{.digest}}'
+$ dockry digest --fq shyiko/openvpn:2.4.0_easyrsa-3.0.3
 shyiko/openvpn@sha256:5ff43da1e85f8f5fe43aa7d609946d9ceb8ca0a7665cf4bbedc82d840428a8ff
 
-# same as above (alias)
-$ dockry digest --fq shyiko/openvpn:2.4.0_easyrsa-3.0.3
+# same as above
+$ dockry inspect shyiko/openvpn:2.4.0_easyrsa-3.0.3 --format='{{.name}}@{{.digest}}'
 
 # image(s) can only be deleted using a digest 
 # (there is no such thing as "to remove a tag" in Docker Registry V2)
@@ -154,15 +152,16 @@ $ dockry rm $(dockry digest --fq gitlab.example.com:4567/group/project:experimen
     "digest": string*,
     "downloadSize": number*,
     "os": string*,
+    "osVersion": string,
+    "osFeature": []string,
     "arch": string*,
+    "cpuVariant": string,
+    "cpuFeature": []string,
     "timestamp": string_containing_date_in_iso8601*,
     "config": { 
       // Dockerfile instructions
       "cmd": []string,
-      "env": map[string]string,
-      "expose": []string,
-      "cmd": []string,
-      "entrypoint": string,
+      "entrypoint": []string,
       "env": map[string]string,
       "expose": []string,
       "label": map[string]string,
