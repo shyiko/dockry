@@ -250,6 +250,13 @@ func (p *PlatformFilter) accept(o *Platform) bool {
 		(!p.Strict || isSliceSubset(o.OsFeature, p.OsFeature) && isSliceSubset(o.CpuFeature, p.CpuFeature))
 }
 
+func (p *PlatformFilter) acceptGivenPlatformFromConfig(o *Platform) bool {
+	if p == nil {
+		return true
+	}
+	return (p.Os == "" || p.Os == o.Os) && (p.Arch == "" || p.Arch == o.Arch)
+}
+
 func isSliceSubset(l, r []string) bool {
 	if len(l) == 0 {
 		return true
@@ -437,7 +444,7 @@ func (c *Client) InspectCWithOpt(ref string, opt InspectOpt) (<-chan *Image, <-c
 			Os:   configBlob.Os,
 			Arch: configBlob.Architecture,
 		}
-		if opt.PlatformFilter.accept(platform) {
+		if opt.PlatformFilter.acceptGivenPlatformFromConfig(platform) {
 			env := make(map[string]string)
 			for _, entry := range configBlob.Config.Env {
 				split := append(strings.SplitN(entry, "=", 2), "")
