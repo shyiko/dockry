@@ -66,33 +66,33 @@ func main() {
 		}
 		return c
 	}
-	newPlatformFilter := func(cmd *cobra.Command) (*v2.PlatformFilter, error) {
+	newPlatformFilter := func(cmd *cobra.Command) (*v2.PlatformFilter, string, error) {
 		p, err := cmd.Flags().GetString("platform")
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		l64, err := cmd.Flags().GetBool("l64")
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		if l64 {
 			if p != "" {
-				return nil, errors.New("--platform/-p and --l64/-x cannot be used together")
+				return nil, "", errors.New("--platform/-p and --l64/-x cannot be used together")
 			}
 			p = "linux/amd64"
 		}
 		platform, err := parsePlatform(p)
 		if err != nil {
-			return nil, fmt.Errorf("--platform: %s", err.Error())
+			return nil, "", fmt.Errorf("--platform: %s", err.Error())
 		}
 		strict, err := cmd.Flags().GetBool("strict")
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		pf := &v2.PlatformFilter{Platform: platform, Strict: strict}
 		log.Debugf("%#v", *pf)
 		log.Debugf("%#v", *pf.Platform)
-		return pf, nil
+		return pf, p, nil
 	}
 	rootCmd := &cobra.Command{
 		Use:  "dockry",
@@ -150,12 +150,16 @@ func main() {
 			if len(args) != 1 {
 				return pflag.ErrHelp
 			}
-			pf, err := newPlatformFilter(cmd)
+			pf, p, err := newPlatformFilter(cmd)
 			if err != nil {
 				return err
 			}
 			c := newV2Client()
-			tags, err := c.LsWithOpt(args[0], v2.LsOpt{Limit: limit})
+			lsOpt := v2.LsOpt{Limit: limit}
+			if p != "" {
+				lsOpt.Limit = 0
+			}
+			tags, err := c.LsWithOpt(args[0], lsOpt)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -172,7 +176,7 @@ func main() {
 					maxTagLen = l
 				}
 			}
-			padding := maxTagLen + len(" (linux/amd64)")
+			padding := maxTagLen + len(" (windows,10.0.14393.2068/arm64,v8(sse))")
 			if fq {
 				padding += len(name) + 1
 			}
@@ -209,7 +213,7 @@ func main() {
 			if len(args) == 0 {
 				return pflag.ErrHelp
 			}
-			pf, err := newPlatformFilter(cmd)
+			pf, _, err := newPlatformFilter(cmd)
 			if err != nil {
 				return err
 			}
@@ -258,7 +262,7 @@ func main() {
 			if len(args) == 0 {
 				return pflag.ErrHelp
 			}
-			pf, err := newPlatformFilter(cmd)
+			pf, _, err := newPlatformFilter(cmd)
 			if err != nil {
 				return err
 			}
