@@ -88,7 +88,7 @@ func main() {
 		if err != nil {
 			return nil, err
 		}
-		pf := &v2.PlatformFilter{platform, strict}
+		pf := &v2.PlatformFilter{Platform: platform, Strict: strict}
 		log.Debugf("%#v", *pf)
 		log.Debugf("%#v", *pf.Platform)
 		return pf, nil
