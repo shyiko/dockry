@@ -7,6 +7,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/shyiko/dockry/client"
 	"github.com/shyiko/dockry/rfc7235"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -138,8 +139,16 @@ func (c *Client) exchangeAuthorizationForAccessToken(wwwAuthenticate string, aut
 	return r.Token, nil
 }
 
-func (c *Client) Ls(image string, limit int) ([]string, error) {
-	img, err := client.ParseImageRef(image)
+type LsOpt struct {
+	Limit int
+}
+
+func (c *Client) Ls(ref string) ([]string, error) {
+	return c.LsWithOpt(ref, LsOpt{})
+}
+
+func (c *Client) LsWithOpt(ref string, opt LsOpt) ([]string, error) {
+	img, err := client.ParseImageRef(ref)
 	log.Debugf("%#v", img)
 	if img.Digest != "" {
 		return nil, errors.New("Listing tags by digest is not supported")
@@ -149,8 +158,8 @@ func (c *Client) Ls(image string, limit int) ([]string, error) {
 	}
 	method := "GET"
 	query := ""
-	if limit > 0 {
-		query = fmt.Sprintf("?n=%d", limit)
+	if opt.Limit > 0 {
+		query = fmt.Sprintf("?n=%d", opt.Limit)
 	}
 	tagsListURL := fmt.Sprintf("https://%s/v2/%s/tags/list"+query, img.Registry, img.Name)
 	res, err := c.request(method, tagsListURL, nil, imageAccessTokenCacheKey(img))
@@ -177,8 +186,8 @@ func (c *Client) Ls(image string, limit int) ([]string, error) {
 	}
 	reverseInPlace(r.Tags)
 	rslice := r.Tags // ?n=<number> is not universally supported
-	if limit > 0 && limit < len(rslice) {
-		rslice = rslice[0:limit]
+	if opt.Limit > 0 && opt.Limit < len(rslice) {
+		rslice = rslice[0:opt.Limit]
 	}
 	return rslice, nil
 }
@@ -257,8 +266,17 @@ func isSliceSubset(l, r []string) bool {
 	return true
 }
 
-func (c *Client) Inspect(ref string, pf *PlatformFilter) ([]*Image, error) {
-	ch, errch := c.InspectC(ref, pf)
+type InspectOpt struct {
+	PlatformFilter *PlatformFilter
+	Limit          int
+}
+
+func (c *Client) Inspect(ref string) ([]*Image, error) {
+	return c.InspectWithOpt(ref, InspectOpt{})
+}
+
+func (c *Client) InspectWithOpt(ref string, opt InspectOpt) ([]*Image, error) {
+	ch, errch := c.InspectCWithOpt(ref, opt)
 	var r []*Image
 	for img := range ch {
 		r = append(r, img)
@@ -269,7 +287,11 @@ func (c *Client) Inspect(ref string, pf *PlatformFilter) ([]*Image, error) {
 	return r, nil
 }
 
-func (c *Client) InspectC(ref string, pf *PlatformFilter) (<-chan *Image, <-chan error) {
+func (c *Client) InspectC(ref string) (<-chan *Image, <-chan error) {
+	return c.InspectCWithOpt(ref, InspectOpt{})
+}
+
+func (c *Client) InspectCWithOpt(ref string, opt InspectOpt) (<-chan *Image, <-chan error) {
 	ch := make(chan *Image)
 	errch := make(chan error, 1)
 	go func() {
@@ -315,7 +337,14 @@ func (c *Client) InspectC(ref string, pf *PlatformFilter) (<-chan *Image, <-chan
 				errch <- fmt.Errorf("Failed to deserialize response of %s %s (%s)", method, manifestURL, err.Error())
 				return
 			}
+			l := opt.Limit
+			if l < 0 {
+				l = math.MaxInt32
+			}
 			for _, manifest := range manifestList.Manifests {
+				if l < 1 {
+					break
+				}
 				platform := &Platform{
 					Os:         manifest.Platform.Os,
 					OsVersion:  manifest.Platform.OsVersion,
@@ -324,15 +353,17 @@ func (c *Client) InspectC(ref string, pf *PlatformFilter) (<-chan *Image, <-chan
 					CpuVariant: manifest.Platform.Variant,
 					CpuFeature: manifest.Platform.Features,
 				}
-				if !pf.accept(platform) {
+				if !opt.PlatformFilter.accept(platform) {
 					continue
 				}
 				ref := img.FQNameRaw() + "@" + manifest.Digest
-				cch, cerrch := c.InspectC(ref, pf) // nil instead of pf for e.g. linux/arm64,v8 sake
+				cch, cerrch := c.InspectCWithOpt(ref, opt)
+				// cch expected to contain one or no images
 				for imgx := range cch {
 					imgx.Tag = img.Tag
 					imgx.Platform = platform
 					ch <- imgx
+					l--
 				}
 				if err := <-cerrch; err != nil {
 					errch <- err
@@ -406,7 +437,7 @@ func (c *Client) InspectC(ref string, pf *PlatformFilter) (<-chan *Image, <-chan
 			Os:   configBlob.Os,
 			Arch: configBlob.Architecture,
 		}
-		if pf.accept(platform) {
+		if opt.PlatformFilter.accept(platform) {
 			env := make(map[string]string)
 			for _, entry := range configBlob.Config.Env {
 				split := append(strings.SplitN(entry, "=", 2), "")

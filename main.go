@@ -12,6 +12,7 @@ import (
 	"github.com/shyiko/dockry/client/registry/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"math"
 	"os"
 	"regexp"
 	"runtime"
@@ -100,6 +101,9 @@ func main() {
 			if debug, _ := cmd.Flags().GetBool("debug"); debug {
 				log.SetLevel(log.DebugLevel)
 			}
+			if limit < 0 {
+				limit = math.MaxInt32
+			}
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if showVersion, _ := cmd.Flags().GetBool("version"); showVersion {
@@ -117,7 +121,7 @@ func main() {
 				return pflag.ErrHelp
 			}
 			c := newV2Client()
-			tags, err := c.Ls(args[0], limit)
+			tags, err := c.LsWithOpt(args[0], v2.LsOpt{Limit: limit})
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -151,7 +155,7 @@ func main() {
 				return err
 			}
 			c := newV2Client()
-			tags, err := c.Ls(args[0], limit)
+			tags, err := c.LsWithOpt(args[0], v2.LsOpt{Limit: limit})
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -175,10 +179,15 @@ func main() {
 			format := `{{with $ref := (print ` + prefix + ` .tag " (" (. | platform) ")")}}{{pad $ref ` + strconv.Itoa(padding) + `}}{{end}}` +
 				"\t{{.downloadSize | na | hsize}}\t{{.timestamp | hsince}}"
 			out := newOutputStream(format)
+			l := limit
 			for _, tag := range tags {
-				ch, errch := c.InspectC(name+":"+tag, pf)
+				if l < 1 {
+					break
+				}
+				ch, errch := c.InspectCWithOpt(name+":"+tag, v2.InspectOpt{PlatformFilter: pf, Limit: l})
 				for img := range ch {
 					out.write(img)
+					l--
 				}
 				if err := <-errch; err != nil {
 					log.Fatal(err)
@@ -210,10 +219,15 @@ func main() {
 			}
 			c := newV2Client()
 			out := newOutputStream(format)
+			l := limit
 			for _, imageRef := range args {
-				ch, errch := c.InspectC(imageRef, pf)
+				if l < 1 {
+					break
+				}
+				ch, errch := c.InspectCWithOpt(imageRef, v2.InspectOpt{PlatformFilter: pf, Limit: l})
 				for img := range ch {
 					out.write(img)
+					l--
 				}
 				if err := <-errch; err != nil {
 					log.Fatal(err)
@@ -249,14 +263,19 @@ func main() {
 				return err
 			}
 			c := newV2Client()
+			l := limit
 			for _, imageRef := range args {
-				ch, errch := c.InspectC(imageRef, pf)
+				if l < 1 {
+					break
+				}
+				ch, errch := c.InspectCWithOpt(imageRef, v2.InspectOpt{PlatformFilter: pf, Limit: l})
 				for img := range ch {
 					prefix := ""
 					if fq {
 						prefix = img.Name + "@"
 					}
 					fmt.Println(prefix + img.Digest)
+					l--
 				}
 				if err := <-errch; err != nil {
 					log.Fatal(err)
