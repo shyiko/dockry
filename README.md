@@ -87,21 +87,27 @@ mysql:latest
 mysql:8
 
 # pretty print 
-$ dockry ll azul/zulu-openjdk --limit=3 
+$ dockry ll node:latest 
 
-master (linux/amd64)  151 MB  3 months ago
-latest (linux/amd64)  159 MB  6 days ago
-9u04 (linux/amd64)    267 MB  6 days ago
+latest   linux/amd64    270 MB  3 days ago
+latest   linux/arm,v7   240 MB  5 days ago
+latest   linux/arm64,v8 245 MB  4 days ago
+latest   linux/386      273 MB  6 days ago
+latest   linux/ppc64le  256 MB  5 days ago
+latest   linux/s390x    252 MB  5 days ago
 
-# same as above
-$ dockry inspect $(dockry ls alpine --fq --limit=3) \
-    --format=$'{{.tag}} ({{platform .}})\t{{.downloadSize | hsize}}\t{{.timestamp | hsince}}'
+# pretty print (filter by platform)
+$ dockry ll node -p linux/amd64 --limit=5
 
-# same as above
-$ for image in $(dockry ls alpine --fq --limit=3); do
-  dockry inspect $image \
-    --format=$'{{.tag}} ({{platform .}})\t{{.downloadSize | hsize}}\t{{.timestamp | hsince}}' 
-  done
+wheezy   linux/amd64    202 MB  5 days ago
+stretch  linux/amd64    343 MB  5 days ago
+slim     linux/amd64    92 MB   3 days ago
+onbuild  linux/amd64    270 MB  3 days ago
+latest   linux/amd64    270 MB  3 days ago
+
+# same as above 
+# (-x is an alias for -p linux/amd64) 
+$ dockry ll node -x --limit=5
 
 # inspect image without `docker pull`ing
 $ dockry inspect node:6.9.1
@@ -126,8 +132,22 @@ $ dockry inspect node:6.9.1
     }
   }
 ]
+
+# customize inspect output 
+$ dockry inspect $(dockry ls alpine --fq --limit=3) \
+    -p linux/amd64 --format=$'{{.name}}:{{.digest}} {{.tag}}'
+
+alpine@sha256:8c03bb07a531c53ad7d0f6e7041b64d81f99c6e493cb39abba56d956b40eacbc latest 
+alpine@sha256:6fa3225360ea1a48aaee4ca87de66e8e12b9a4f749f37acc7b4b5b9cc3d91b13 edge 
+alpine@sha256:8c03bb07a531c53ad7d0f6e7041b64d81f99c6e493cb39abba56d956b40eacbc 3.7
+
+# same as above
+$ for image in $(dockry ls alpine --fq --limit=3); do
+  dockry inspect $image \
+    -p linux/amd64 --format=$'{{.name}}:{{.digest}} {{.tag}}' 
+  done
     
-# output fully-qualified digest of an image
+# output fully-qualified (i.e. with name as a prefix) digest of an image
 $ dockry digest --fq shyiko/openvpn:2.4.0_easyrsa-3.0.3
 shyiko/openvpn@sha256:5ff43da1e85f8f5fe43aa7d609946d9ceb8ca0a7665cf4bbedc82d840428a8ff
 

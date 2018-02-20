@@ -145,7 +145,7 @@ func main() {
 		Use:   "ll [image]",
 		Short: `List image "<tag> <download size> <time since update>"s`,
 		Long: `List image "<tag> <download size> <time since update>"s` +
-			"\nAn alias for `inspect $(dockry ls <image> <flags>) --format=$'{{.tag}}\\t{{.downloadSize | na | hsize}}\\t{{.timestamp | hsince}}'`",
+			"\nAn alias for `inspect $(dockry ls <image> <flags>) --format=$'{{.tag}}\\{{platform .}}\\t{{.downloadSize | na | hsize}}\\t{{.timestamp | hsince}}'`",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return pflag.ErrHelp
@@ -169,19 +169,18 @@ func main() {
 			if fq {
 				prefix = `.name ":"`
 			}
-			maxTagLen := 0
+			padding := 0
 			for _, tag := range tags {
 				l := len(tag)
-				if maxTagLen < l {
-					maxTagLen = l
+				if padding < l {
+					padding = l
 				}
 			}
-			padding := maxTagLen + len(" (windows,10.0.14393.2068/arm64,v8(sse))")
 			if fq {
 				padding += len(name) + 1
 			}
-			format := `{{with $ref := (print ` + prefix + ` .tag " (" (. | platform) ")")}}{{pad $ref ` + strconv.Itoa(padding) + `}}{{end}}` +
-				"\t{{.downloadSize | na | hsize}}\t{{.timestamp | hsince}}"
+			format := `{{with $ref := (print ` + prefix + ` .tag)}}{{pad $ref ` + strconv.Itoa(padding) + `}}{{end}}` +
+				"\t{{platform . | flex0}}\t{{.downloadSize | na | hsize}}\t{{.timestamp | hsince}}"
 			out := newOutputStream(format)
 			l := limit
 			for _, tag := range tags {
@@ -250,6 +249,7 @@ func main() {
 		"      hsince - e.g. {{ .timestamp | hsince }} - humanize time (e.g. 1 month ago)\n"+
 		"      platform - e.g. {{ . | platform }} - combine os/cpu-related info into a single value (e.g. linux/amd64)\n"+
 		"      pad - e.g. {{ pad .tag 50 }} - append padding if necessary"+
+		"      flex0..flex9 - e.g. {{ .tag | flex }} - pad based on the length of the previously seen values"+
 		"")
 	rootCmd.AddCommand(inspectCommand)
 	digestCommand := &cobra.Command{
@@ -488,6 +488,28 @@ func newTemplate(tmpl string) (*template.Template, error) {
 			}
 			return v, nil
 		},
+	}
+	flexMap := make(map[string]int)
+	flex := func(v interface{}, def int, key string) (interface{}, error) {
+		if s, ok := v.(string); ok && s != "" {
+			p, ok := flexMap[key]
+			if !ok {
+				p = def
+			}
+			l := len(s)
+			if p < l {
+				flexMap[key] = l
+				p = l
+			}
+			return s + strings.Repeat(" ", p-l), nil
+		}
+		return v, nil
+	}
+	for i := 0; i < 10; i++ {
+		k := "flex" + strconv.Itoa(i)
+		funcMap[k] = func(v interface{}) (interface{}, error) {
+			return flex(v, 0, k)
+		}
 	}
 	return template.New("template").Funcs(funcMap).Option("missingkey=error").Parse(tmpl)
 }
