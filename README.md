@@ -94,7 +94,7 @@ latest (linux/amd64)  159 MB  6 days ago
 9u04 (linux/amd64)    267 MB  6 days ago
 
 # same as above
-$ dockry inspect $(dockry ls alpine --fq --limit=3)
+$ dockry inspect $(dockry ls alpine --fq --limit=3) \
     --format=$'{{.tag}} ({{platform .}})\t{{.downloadSize | hsize}}\t{{.timestamp | hsince}}'
 
 # same as above
