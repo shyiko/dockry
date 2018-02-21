@@ -217,7 +217,7 @@ git clone https://github.com/shyiko/dockry $GOPATH/src/github.com/shyiko/dockry
 cd $GOPATH/src/github.com/shyiko/dockry
 make fetch
 
-go run dockry.go
+go run *.go
 ```
 
 ## Legal
