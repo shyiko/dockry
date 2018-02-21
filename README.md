@@ -3,6 +3,8 @@
 Docker Registry V2 command-line client  
 (compatible with any registry implementing [Docker Registry HTTP API V2](https://docs.docker.com/registry/spec/api/), ([Docker Hub](https://hub.docker.com/), GitLab Container Registry, etc); public or private).
 
+[![asciicast](https://asciinema.org/a/1cDD8J1uiBtGPy1p8Ts0NMGAR.png)](https://asciinema.org/a/1cDD8J1uiBtGPy1p8Ts0NMGAR)
+
 In short, it allows you to:
 - List Docker image tags.  
 e.g. `dockry ls alpine`, `dockry ls gitlab.example.com:4567/group/project --limit=10`
