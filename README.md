@@ -27,14 +27,14 @@ e.g. `dockry rm gitlab.example.com:4567/group/project@sha256:661a5a8...`
 #### macOS
 
 ```sh
-curl -sSL https://github.com/shyiko/dockry/releases/download/0.1.0/dockry-0.1.0-darwin-amd64 \
+curl -sSL https://github.com/shyiko/dockry/releases/download/0.2.0/dockry-0.2.0-darwin-amd64 \
   -o dockry && chmod a+x dockry && sudo mv dockry /usr/local/bin/  
 ``` 
 
 Verify PGP signature (optional but recommended):
 
 ```    
-curl -sSL https://github.com/shyiko/dockry/releases/download/0.1.0/dockry-0.1.0-darwin-amd64.asc \
+curl -sSL https://github.com/shyiko/dockry/releases/download/0.2.0/dockry-0.2.0-darwin-amd64.asc \
    -o dockry.asc
 curl -sS https://keybase.io/shyiko/pgp_keys.asc | gpg --import
 gpg --verify dockry.asc /usr/local/bin/dockry
@@ -45,14 +45,14 @@ gpg --verify dockry.asc /usr/local/bin/dockry
 #### Linux
 
 ```
-curl -sSL https://github.com/shyiko/dockry/releases/download/0.1.0/dockry-0.1.0-linux-amd64 \
+curl -sSL https://github.com/shyiko/dockry/releases/download/0.2.0/dockry-0.2.0-linux-amd64 \
   -o dockry && chmod a+x dockry && sudo mv dockry /usr/local/bin/  
 ```
 
 Verify PGP signature (optional but recommended):
 
 ```    
-curl -sSL https://github.com/shyiko/dockry/releases/download/0.1.0/dockry-0.1.0-linux-amd64.asc \
+curl -sSL https://github.com/shyiko/dockry/releases/download/0.2.0/dockry-0.2.0-linux-amd64.asc \
   -o dockry.asc
 curl -sS https://keybase.io/shyiko/pgp_keys.asc | gpg --import
 gpg --verify dockry.asc /usr/local/bin/dockry
