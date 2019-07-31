@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"math"
+	"net/http"
 	"os"
 	"regexp"
 	"runtime"
@@ -54,6 +56,7 @@ func main() {
 	var fq bool
 	var limit int
 	var user string
+	var insecure bool
 	newV2Client := func() *v2.Client {
 		c, err := v2.NewClient()
 		if err != nil {
@@ -103,6 +106,10 @@ func main() {
 			}
 			if limit <= 0 {
 				limit = math.MaxInt32
+			}
+			if insecure {
+				http.DefaultTransport.(*http.Transport).TLSClientConfig =
+					&tls.Config{InsecureSkipVerify: true}
 			}
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -350,6 +357,7 @@ func main() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "Explicit username:password for authorization"+
 		" (by default ~/.docker/config.json is used)")
+	rootCmd.PersistentFlags().BoolVarP(&insecure, "insecure", "k", false, "Allow insecure server connections when using SSL")
 	for _, cmd := range []*cobra.Command{
 		inspectCommand,
 		llCommand,
